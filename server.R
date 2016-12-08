@@ -3,96 +3,120 @@ library(leaflet)
 library(sp)
 library(maptools)
 
-ch <- readShapePoly("trt10_churning_selected")
-dfch <- data.frame(ch)
-city <- read.csv("city_churn_fast.csv")
+
+jhbt02 <- readShapePoly("jhbt02")
+df_jhbt02 <- data.frame(jhbt02)
+jhbt10 <- readShapePoly("jhbt10")
+df_jhbt10 <- data.frame(jhbt10)
+jhbl10 <- readShapePoly("jhbl10")
+df_jhbl10 <- data.frame(jhbl10)
+jhbh10 <- readShapePoly("jhbh10")
+df_jhbh10 <- data.frame(jhbh10)
+abschg <- readShapePoly("abschg")
+df_abschg <- data.frame(abschg)
 zips <- read.csv("ZIP_centroids.csv")
+ch <- readShapePoly("SoCal_place_2010_UA")
+dfch <- data.frame(ch)
+
+descr = data.frame(c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in Balance, 2002-2010"),
+                   c("JHR02",
+                     "JHR10",
+                     "Low JHR10",
+                     "High JHR10",
+                     "CHG"))
+colnames(descr) = c("var", "explain")
 
 shinyServer(function(input, output) {
-  
+
   # Grab ZIP code input
-  center <- reactiveValues(xcoord=-118.2386, ycoord=34.06583)
+  center <- reactiveValues(xcoord=-118.239, ycoord=34.06583)
   observeEvent(input$recenter, {
     center$xcoord = zips$x_centr[zips$CODE==input$zip]
     center$ycoord = zips$y_centr[zips$CODE==input$zip]
   })
- 
+  
+  ########### CLUSTERS MAP ###########
+
+  finalMap <- reactive ({
+    withProgress(message='Please Wait: Map Loading', {
+    # Create map 
+    m = leaflet() %>%  setView(lng=center$xcoord, lat=center$ycoord , zoom=10) %>% addTiles() %>%
+    addPolygons(data=jhbt02, stroke=T, weight=.7, color="black", fillOpacity=0.4, opacity=1, group="J-H Ratio, 2002",
+                fillColor = ~colorFactor("RdYlBu", df_jhbt02$jhb02t_CAT)(df_jhbt02$jhb02t_CAT)) %>%
+    addPolygons(data=jhbt10, stroke=T, weight=.7, color="black", fillOpacity=0.4, opacity=1, group="J-H Ratio, 2010",
+                fillColor = ~colorFactor("RdYlBu", df_jhbt10$jhb10t_CAT)(df_jhbt10$jhb10t_CAT)) %>%
+    addPolygons(data=jhbl10, stroke=T, weight=.7, color="black", fillOpacity=0.4, opacity=1, group="Low-income J-H Ratio, 2010",
+                fillColor = ~colorFactor("RdYlBu", df_jhbl10$jhb10l_CAT)(df_jhbl10$jhb10l_CAT)) %>%
+    addPolygons(data=jhbh10, stroke=T, weight=.7, color="black", fillOpacity=0.4, opacity=1, group="High-income J-H Ratio, 2010",
+                  fillColor = ~colorFactor("RdYlBu", df_jhbh10$jhb10h_CAT)(df_jhbh10$jhb10h_CAT)) %>%  
+    addPolygons(data=abschg, stroke=T, weight=.7, color="black", fillOpacity=0.4, opacity=1, group="Change in Balance, 2002-2010",
+                  fillColor = ~colorFactor("RdYlBu", df_abschg$chgabs_CAT)(df_abschg$chgabs_CAT)) %>%
+      
+    addLegend("bottomright", pal=colorFactor("RdYlBu", df_jhbt10$jhb10t_CAT), values=df_jhbt10$jhb10t_CAT, opacity=0.75, title="Legend - J-H Balance") %>%
+    addLegend("bottomleft", pal=colorFactor("RdYlBu", df_abschg$chgabs_CAT), values=df_abschg$chgabs_CAT, opacity=0.75, title="Legend - Change") %>%
+      
+    addLayersControl(
+      baseGroups = c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in Balance, 2002-2010"),
+      options = layersControlOptions(collapsed = FALSE))
+    })
+  })
+  
+  # Generate Map Output
+  output$clusterMap = renderLeaflet(finalMap())
+  
+  
+  
+  
+  ########## VALUES MAP #################
   # Grab Inputs - ALL
-  options = reactiveValues(choose="ones")
-  observeEvent(input$empgo, {
-    emplink = switch(input$emp, "Employment in 1997"="1997", "Employment in 2000"="2000", "Employment in 2012"="12",  
-                     "Employment in 2014"="14", "Employment Growth, 1997-2014"="9714", "Employment Growth, 2000-2012"="0012")
-    options$choose = paste("totemp", emplink, sep="")
+  options = reactiveValues(choose="jhbt02") #Shape_Area chosen as a placeholder since it's numeric 
+  observeEvent(input$go, {
+    link1 = switch(input$time, "2002"="02", "2010"="10", "Change in Ratio"="rc", "Change in Balance"="bc")
+    link2 = switch(input$level, "Total" = "t", "Low" = "l", "Mid" = "m", "High" = "h")
+    options$choose = paste("jhb", link2, link1, sep="")
   })
-  observeEvent(input$churngo, {
-    churnlink = switch(input$churn, "Churning, 1997-2014"="9714", "Churning, 2000-2012"="0012")
-    options$choose = paste("churn", churnlink, sep="")
-  })
-  observeEvent(input$clustgo, {
-    clustlink = switch(input$clust, "Socioeconomically-derived Clusters"="fac2", "Spatially-derived Clusters"="LISA")
-    options$choose = paste("clust", clustlink, sep="")
-  })
-  observeEvent(input$growgo, {
-    growlink = switch(input$grow, "Churning and Income Growth"="inc", "Churning and Job Growth"="job", "Churning and Home Value Growth"="hov")
-    options$choose = paste("grow", growlink, sep="")
-  })
-  observeEvent(input$clear, {
-    options$choose = "ones"
-  })
-  
-  # Reactive function to generate a color palette based on the variable chosen
+
+    # Create a reactive color palette
   colorpal <- reactive({
-    datause = dfch[,grep(options$choose, colnames(dfch))]
-    if(input$analysis == 3 | input$analysis == 5){colorpal <- colorFactor("RdYlBu", datause, na.color="#FFFFFF")}
-    else if(input$analysis == 4) {colorpal <- colorBin("RdYlBu", datause, bins=c(-1, -0.2, -0.1, 0, 0.1, 0.2, 1), na.color="#B0171F")}
-    else if(input$analysis == 2){colorpal <- colorBin("Blues", datause, bins=5, na.color="#B0171F")}
-    else if(input$analysis == 1 & (input$emp == "Employment Growth, 2000-2012" | input$emp == "Employment Growth, 1997-2014")) {colorpal <- colorBin("RdYlBu", datause, bins=c(-55000,-2000,-500,0,500,2000,70000), na.color="#FFFFFF")}
-    else {colorpal <- colorBin("Blues", datause, bins=c(0,750,2000,5000,15000,100000), na.color="#FFFFFF")}
+    datause <- dfch[,grep(options$choose, colnames(dfch))]
+    pal <- colorBin("Blues", datause, bins=quantile(datause, na.rm=T), na.color="#B0171F")
   })
   
-  # Generate the basemap
-  output$map <- renderLeaflet({
+    # Generate the basemap
+  output$valuesMap <- renderLeaflet({
     leaflet(ch) %>% setView(lng=center$xcoord, lat=center$ycoord , zoom=10) %>% addTiles()
   })
-  
-  # Observe function to add polygons and legend to basemap based on color palette 
+    # Observe function to add polygons and legend to basemap based on color palette 
   observe({
+    withProgress(message='Please Wait: Map Loading', {
     pal <- colorpal()
     datause <- dfch[,grep(options$choose, colnames(dfch))]
-    leafletProxy("map") %>% clearControls() %>% clearShapes() %>% 
+    lab <- "Label" # switch(options$choose, 'age_k4ent'='Age Mixing', 'race_k5ent'='Race Mixing', 'educ_k5ent'='Education Mixing', 'inc_k5ent'='Income Mixing', 'resage_ent'='Dwelling Age Mixing', 'LU_k5ent'='Land Use Mixing', 'ht_k4ent'='Housing Type Mixing', 'totemp'='Total Employment', 'medhhinc'='Median Household Income', 'avgval'='Average Home Value', 'tpctres'='Percent Residential Space', 'tpctopen'='Percent Open Space', 'tblack'='Percent Black', 'tlatino'='Percent Latino', 'tpctund20_'='Percent < 20 yrs old', 'tpctovr65'='Percent > 65 yrs old', 'timm'='Percent Foreign Born', 'tpden'='Population Density (pop/acre)', 'tunemp'='Unemployment Rate', 'towner'='Percent Homeowners', 'tocc'='Percent Occupancy', 'thowlng'='Average Length of Residence')
+    leafletProxy("valuesMap") %>% clearControls() %>% clearShapes() %>% 
       addPolygons(data=ch, stroke=T, weight=1, fillColor = ~pal(datause), color="black",
                   fillOpacity=0.6, opacity=1, popup=~NAME10) %>%
-      addLegend("bottomleft", pal=pal, values=datause, opacity=0.75, title=options$choose)
+      addLegend("bottomleft", pal=pal, values=datause, opacity=0.75, title=lab)
     })
+  })  
   
-  # Generate Histogram
-  observeEvent(input$histgo, {  
-    output$hist <- renderPlot({
-      if(input$analysis == 5 | input$analysis == 3){return(NULL)}   else{ 
-        datause <- city[,grep(options$choose, colnames(city))]
-        datause[is.na(datause)] = 0
-        q2 = as.numeric(quantile(datause, 0.02))
-        q98 = as.numeric(quantile(datause, 0.98))
-        hist(datause, xlab=NULL, col="dodgerblue", breaks=((max(datause)-min(datause))/(q98-q2))*12, xlim=c(q2, q98),
-             ylab="# of SoCal Cities", border="white", main=options$choose)
-        legend("topright", c(input$city), lwd=2, box.col="white")
-        abline(v=mean(datause, na.rm=T), lty=2)
-        legend("topright", c(input$city, "Avg"), lwd=c(2,1), lty=c(1,2), box.col="white")
-        abline(v=city[,grep(options$choose, colnames(city))][city$NAME10==input$city], lwd=2)
-        }
-    })
-  })
   
-  # Add Descriptions
+  
+  # Add Variable Descriptions
   output$var_desc <- renderText({
-    data_notes = switch(input$analysis,
-                        "1" = "Employment is derived from ReferenceUSA and shows the number of jobs in each tract. Employment growth shows the net increase/decrease in job count per tract (not a percent).",
-                        "2" = "Churning is calculated as the (annualized) sum of business establishment births and deaths divided by total employment. It is a measure of local economic turnover.",
-                        "3" = "Socioeconomic clusters group similarly-churning tracts based on things like income, race, and homeownership into 6 categories. Spatial clusters identify hotspots where nearby tracts display similar levels of churn. You must click CLEAR RESULTS before switching to another analysis.",
-                        "4" = "These are results from a geographically-weighted regression showing how the relationship between churning and growth varies over space. In some areas, churning is associated with growth but in other areas it is associated with decline.")
-    paste("-- ", data_notes, sep="")
+    data_link = switch(input$variable,
+                       "Age" = descr$explain[descr$var=="Age"],
+                       "Race"= descr$explain[descr$var=="Race"],
+                       "Income"= descr$explain[descr$var=="Income"],
+                       "Education"= descr$explain[descr$var=="Education"],
+                       "Dwelling Unit Type"= descr$explain[descr$var=="Dwelling Unit Type"],
+                       "Housing Age"= descr$explain[descr$var=="Housing Age"],
+                       "Land Use (Overall)"= descr$explain[descr$var=="Land Use (Overall)"],
+                       "Jobs-Housing L.U." = descr$explain[descr$var=="Jobs-Housing L.U."],
+                       "Local Services L.U." = descr$explain[descr$var=="Local Services L.U."],
+                       "Nuisance Land Use" = descr$explain[descr$var=="Nuisance Land Use"],
+                       "Green Space L.U." = descr$explain[descr$var=="Green Space L.U."])
+    paste("--", input$variable, data_link)
   })
   
-  
- 
 })
+
