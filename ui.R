@@ -2,6 +2,7 @@ library(shiny)
 library(leaflet)
 library(sp)
 library(maptools)
+library(RColorBrewer)
 
 shinyUI(
   navbarPage("MFI Webmap: Jobs-Housing Balance in Southern California", id="nav",
@@ -16,7 +17,7 @@ shinyUI(
                           h6("--- Please allow a minute for the app to load after first opening. It's a lot of data!"),
                           h6("-1- Begin by selecting a measure using the radio buttons to the right."),
                           selectInput("variable", label=h6("-2- Choose the same measure below for more information:"), selected=" ",
-                                      choices=list(" ", "J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in Balance, 2002-2010")),
+                                      choices=list(" ", "J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in J-H Ratio, 2002-2010", "Change in J-H Balance, 2002-2010")),
                           h6(textOutput("var_desc")),
                           h6("-- See the ", a("full report here", href="http://mfi.soceco.uci.edu/category/quarterly-report/", target="_blank"), "for details.")
                           )
