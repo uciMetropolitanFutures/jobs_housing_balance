@@ -20,13 +20,13 @@ zips <- read.csv("ZIP_centroids.csv")
 ch <- readShapePoly("SoCal_place_2010_UA")
 dfch <- data.frame(ch)
 
-descr = data.frame(c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in J-H Ratio, 2002-2010", "Change in J-H Balance, 2002-2010"),
-                   c("displays the ratio of jobs to housing in the 2.5 mile radius surrounding census blocks. US Census (LEHD) data are used. High values - above 1.0 - indicate areas of employment concentration, while low values indicate bedroom communities.",
-                     "displays the ratio of jobs to housing in the 2.5 mile radius surrounding census blocks. US Census (LEHD) data are used. High values - above 1.0 - indicate areas of employment concentration, while low values indicate bedroom communities.",
+descr = data.frame(c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in J-H Ratio, 2002-2010", "Change in J-H Imbalance, 2002-2010"),
+                   c("displays the ratio of jobs to housing in the 2.5 mile radius surrounding Census Blocks. US Census (LEHD) data are used. High values - above 1.0 - indicate areas of employment concentration, while low values indicate bedroom communities.",
+                     "displays the ratio of jobs to housing in the 2.5 mile radius surrounding Census Blocks. US Census (LEHD) data are used. High values - above 1.0 - indicate areas of employment concentration, while low values indicate bedroom communities.",
                      "displays the ratio of lower-paying jobs to lower-earning residents. This measure is useful to gauge the extent to which nearby employment opportunities may be available for less advantaged residents.",
-                     "displays the ratio of higher-paying jobs to higher-earning residents. This measure is useful to gauge the extent to which high earners might be able to live near higher paying jobs, or whether there is more spatial separation between where more advantaged residents might live and work.",
+                     "displays the ratio of higher-paying jobs to higher-earning residents. This measure is useful to identify areas where high earners could live near high paying jobs, as opposed to spatial separation.",
                      "displays the CHANGE in the ratio of total jobs to total housing from 2002 to 2010. This measure gauges areas shifting toward higher employment concentration, relative to housing.",
-                     "displays whether jobs-housing ratios are moving toward 1.0 - the point where jobs and housing are equally represented in an area - or away from 1.0, which would indicate a separation of these land use types. The value displayed is difference in the the absolute value of the logarithm of jobs-housing ratio between 2002 and 2010."))
+                     "displays the CHANGE in the level of imbalance between jobs and housing.  High values indicate an area that is becoming more imbalanced, or an increasing separation of these land use types. Low values indicate an increasingly even distribution of jobs and housing in a neighborhood."))
 colnames(descr) = c("var", "explain")
 
 shinyServer(function(input, output) {
@@ -54,7 +54,7 @@ shinyServer(function(input, output) {
                   fillColor = ~colorFactor("RdYlBu", df_jhbh10$jhb10h_CAT)(df_jhbh10$jhb10h_CAT)) %>%  
     addPolygons(data=ratchg, stroke=T, weight=.5, color="black", fillOpacity=0.3, opacity=1, group="Change in J-H Ratio, 2002-2010",
                   fillColor = ~colorFactor("RdYlBu", df_ratchg$chgrat_CAT)(df_ratchg$chgrat_CAT)) %>%  
-    addPolygons(data=abschg, stroke=T, weight=.5, color="black", fillOpacity=0.3, opacity=1, group="Change in J-H Balance, 2002-2010",
+    addPolygons(data=abschg, stroke=T, weight=.5, color="black", fillOpacity=0.3, opacity=1, group="Change in J-H Imbalance, 2002-2010",
                   fillColor = ~colorFactor("RdYlBu", df_abschg$chgabs_CAT)(df_abschg$chgabs_CAT)) %>%
       
     addLegend("bottomright", pal=colorFactor("RdYlBu", df_jhbt10$jhb10t_CAT), values=df_jhbt10$jhb10t_CAT, 
@@ -63,7 +63,7 @@ shinyServer(function(input, output) {
               opacity=0.75, title="Legend for Change Values") %>%
       
     addLayersControl(
-      baseGroups = c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010",  "Change in J-H Ratio, 2002-2010", "Change in J-H Balance, 2002-2010"),
+      baseGroups = c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010",  "Change in J-H Ratio, 2002-2010", "Change in J-H Imbalance, 2002-2010"),
       options = layersControlOptions(collapsed = FALSE))
     })
   })
@@ -73,13 +73,12 @@ shinyServer(function(input, output) {
   
   
   
-  
   ########## VALUES MAP #################
   # Grab Inputs - ALL
   options = reactiveValues(choose="FIDnum") #Shape_Area chosen as a placeholder since it's numeric 
   observeEvent(input$go, {
-    link1 = switch(input$time, "2002 J-H Ratios"="02", "2010 J-H Ratios"="10", "Change in J-H Ratio '02-'10"="rc", "Change in J-H Balance '02-'10"="bc") 
-    link2 = switch(input$level, "Total" = "t", "Low-level" = "l", "Mid-level" = "m", "High-level" = "h")  
+    link1 = switch(input$time, "2002 J-H Ratios"="02", "2010 J-H Ratios"="10", "Change in J-H Ratio '02-'10"="rc", "Change in J-H Imbalance '02-'10"="bc") 
+    link2 = switch(input$level, "Total/All" = "t", "Low income/earnings" = "l", "Middle income/earnings" = "m", "High income/earnings" = "h")  
     options$choose = paste("jhb", link2, link1, sep="")
   })
 
@@ -96,13 +95,13 @@ shinyServer(function(input, output) {
     # Observe function to add polygons and legend to basemap based on color palette 
   observe({
     withProgress(message='Please Wait: Map Loading', {
-    pal <- colorpal()
-    datause <- dfch[,grep(options$choose, colnames(dfch))]
-    lab <- "Legend" #switch(options$choose, 'jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002', 'jhbt10'='Total J-H Ratio, 2010', 'jhbl10'='Low-Level J-H Ratio, 2010', 'jhbm10'='Mid-Level J-H Ratio, 2010', 'jhbh10'='High-Level J-H Ratio, 2010','jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002',)
-    leafletProxy("valuesMap") %>% clearControls() %>% clearShapes() %>% 
-      addPolygons(data=ch, stroke=T, weight=1, fillColor = ~pal(datause), color="black",
-                  fillOpacity=0.5, opacity=1, popup=~NAME10) %>%
-      addLegend("bottomleft", pal=pal, values=datause, opacity=0.75, title=lab)
+      pal <- colorpal()
+      datause <- dfch[,grep(options$choose, colnames(dfch))]
+      lab <- switch(options$choose, 'jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002', 'jhbt10'='Total J-H Ratio, 2010', 'jhbl10'='Low-Level J-H Ratio, 2010', 'jhbm10'='Mid-Level J-H Ratio, 2010', 'jhbh10'='High-Level J-H Ratio, 2010','jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002')
+      leafletProxy("valuesMap") %>% clearControls() %>% clearShapes() %>% 
+        addPolygons(data=ch, stroke=T, weight=1, fillColor = ~pal(datause), color="black",
+                    fillOpacity=0.5, opacity=1, popup=~NAME10) %>%
+        addLegend("bottomleft", pal=pal, values=datause, opacity=0.75, title=lab)
     })
   })  
   
@@ -115,7 +114,7 @@ shinyServer(function(input, output) {
                        "Low-income J-H Ratio, 2010"= descr$explain[descr$var=="Low-income J-H Ratio, 2010"],
                        "High-income J-H Ratio, 2010"= descr$explain[descr$var=="High-income J-H Ratio, 2010"],
                        "Change in J-H Ratio, 2002-2010"= descr$explain[descr$var=="Change in J-H Ratio, 2002-2010"],
-                       "Change in J-H Balance, 2002-2010"= descr$explain[descr$var=="Change in J-H Balance, 2002-2010"])
+                       "Change in J-H Imbalance, 2002-2010"= descr$explain[descr$var=="Change in J-H Imbalance, 2002-2010"])
     paste("--", input$variable, data_link)
   })
   
