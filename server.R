@@ -97,7 +97,7 @@ shinyServer(function(input, output) {
     withProgress(message='Please Wait: Map Loading', {
       pal <- colorpal()
       datause <- dfch[,grep(options$choose, colnames(dfch))]
-      lab <- switch(options$choose, 'jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002', 'jhbt10'='Total J-H Ratio, 2010', 'jhbl10'='Low-Level J-H Ratio, 2010', 'jhbm10'='Mid-Level J-H Ratio, 2010', 'jhbh10'='High-Level J-H Ratio, 2010','jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002')
+      lab <- switch(options$choose, 'jhbt02'='Total J-H Ratio, 2002', 'jhbl02'='Low-Level J-H Ratio, 2002', 'jhbm02'='Mid-Level J-H Ratio, 2002', 'jhbh02'='High-Level J-H Ratio, 2002', 'jhbt10'='Total J-H Ratio, 2010', 'jhbl10'='Low-Level J-H Ratio, 2010', 'jhbm10'='Mid-Level J-H Ratio, 2010', 'jhbh10'='High-Level J-H Ratio, 2010', 'jhbtrc'='Change in Total J-H Ratio', 'jhblrc'='Change in Low-Income J-H Ratio', 'jhbmrc'='Change in Mid-Income J-H Ratio', 'jhbhrc'='Change in High-Income J-H Ratio', 'jhbtbc'='Change in Total J-H Imbalance', 'jhblbc'='Change in Low-Income J-H Imbalance', 'jhbmbc'='Change in Mid-Income J-H Imbalance', 'jhbhbc'='Change in High-Income J-H Imbalance')
       leafletProxy("valuesMap") %>% clearControls() %>% clearShapes() %>% 
         addPolygons(data=ch, stroke=T, weight=1, fillColor = ~pal(datause), color="black",
                     fillOpacity=0.5, opacity=1, popup=~NAME10) %>%
