@@ -52,18 +52,15 @@ shinyServer(function(input, output) {
                 fillColor = ~colorFactor("RdYlBu", df_jhbl10$jhb10l_CAT)(df_jhbl10$jhb10l_CAT)) %>%
     addPolygons(data=jhbh10, stroke=T, weight=.5, color="black", fillOpacity=0.4, opacity=1, group="High-income J-H Ratio, 2010",
                   fillColor = ~colorFactor("RdYlBu", df_jhbh10$jhb10h_CAT)(df_jhbh10$jhb10h_CAT)) %>%  
-    addPolygons(data=ratchg, stroke=T, weight=.5, color="black", fillOpacity=0.3, opacity=1, group="Change in J-H Ratio, 2002-2010",
-                  fillColor = ~colorFactor("RdYlBu", df_ratchg$chgrat_CAT)(df_ratchg$chgrat_CAT)) %>%  
     addPolygons(data=abschg, stroke=T, weight=.5, color="black", fillOpacity=0.3, opacity=1, group="Change in J-H Imbalance, 2002-2010",
                   fillColor = ~colorFactor("RdYlBu", df_abschg$chgabs_CAT)(df_abschg$chgabs_CAT)) %>%
-      
     addLegend("bottomright", pal=colorFactor("RdYlBu", df_jhbt10$jhb10t_CAT), values=df_jhbt10$jhb10t_CAT, 
               opacity=0.75, title="Legend for J-H Ratios") %>%
     addLegend("bottomleft", pal=colorFactor("RdYlBu", df_abschg$chgabs_CAT), values=df_abschg$chgabs_CAT,
               opacity=0.75, title="Legend for Change Values") %>%
       
     addLayersControl(
-      baseGroups = c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010",  "Change in J-H Ratio, 2002-2010", "Change in J-H Imbalance, 2002-2010"),
+      baseGroups = c("J-H Ratio, 2002", "J-H Ratio, 2010", "Low-income J-H Ratio, 2010", "High-income J-H Ratio, 2010", "Change in J-H Imbalance, 2002-2010"),
       options = layersControlOptions(collapsed = FALSE))
     })
   })
